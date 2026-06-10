@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # 1. NestJS Modular Monolith API
+  hoood-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hoood-api
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:HooodSecurePass123@postgres:5432/hoood_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=super_secret_hoood_token_key_change_me
+      - PYTHON_AI_SERVICE_URL=http://python-ai-service:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # 2. Database (PostgreSQL)
+  postgres:
+    image: postgres:15-alpine
+    container_name: hoood-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=HooodSecurePass123
+      - POSTGRES_DB=hoood_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Cache (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: hoood-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
